@@ -95,3 +95,37 @@
 (check-equal? (factorial 4) 24)
 
 (provide factorial)
+
+(define (pan-helper? strict n)
+    (define v (make-vector 10))
+    (vector-set! v 0 #t)
+    (define (h n)
+      (or (zero? n)
+          (and (not (boolean? (vector-ref v (remainder n 10))))
+               (begin
+                 (vector-set! v (remainder n 10) #t)
+                 (h (quotient n 10))))))
+    (define (g n)
+      (or (empty? n)
+          (and (h (car n))
+               (g (cdr n)))))
+    (and (g n)
+         (or (not strict)
+             (foldl (lambda (x y) (and x y)) #t 
+                    (map boolean? (vector->list v))))))
+
+(define (strictly-pandigital? . n) (pan-helper? #t n))
+
+(check-equal? (strictly-pandigital? 123 456 7 8 9) #t)
+(check-equal? (strictly-pandigital? 123 456 7 8) #f)
+(check-equal? (strictly-pandigital? 123 456 7 8 8) #f)
+
+(provide strictly-pandigital?)
+
+(define (pandigital? . n) (pan-helper? #f n))
+
+(check-equal? (pandigital? 123 456 7 8 9) #t)
+(check-equal? (pandigital? 123 456 7 8) #t)
+(check-equal? (pandigital? 123 456 7 8 8) #f)
+
+(provide pandigital?)
