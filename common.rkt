@@ -85,40 +85,45 @@
 
 (define (factorial n)
   (define (helper n acc)
-    (if (= 1 n) acc
-        (helper (sub1 n) (* n acc))))
+    (cond [(zero? n) 1]
+          [(= 1 n) acc]
+          [else (helper (sub1 n) (* n acc))]))
   (helper n 1))
 
 (check-equal? (factorial 1) 1)
 (check-equal? (factorial 2) 2)
 (check-equal? (factorial 3) 6)
 (check-equal? (factorial 4) 24)
+(check-equal? (factorial 0) 1)
 
 (provide factorial)
 
 (define (pan-helper? strict n)
-    (define v (make-vector 10))
-    (vector-set! v 0 #t)
-    (define (h n)
-      (or (zero? n)
-          (and (not (boolean? (vector-ref v (remainder n 10))))
-               (begin
-                 (vector-set! v (remainder n 10) #t)
-                 (h (quotient n 10))))))
-    (define (g n)
-      (or (empty? n)
-          (and (h (car n))
-               (g (cdr n)))))
-    (and (g n)
-         (or (not strict)
-             (foldl (lambda (x y) (and x y)) #t 
-                    (map boolean? (vector->list v))))))
+  (define v (make-vector 10))
+  (if strict (vector-set! v 0 #f) (void))
+  (define (h n)
+    (or (zero? n)
+        (and (not (boolean? (vector-ref v (remainder n 10))))
+             (begin
+               (vector-set! v (remainder n 10) #f)
+               (h (quotient n 10))))))
+  (define (g n)
+    (or (empty? n)
+        (and (h (car n))
+             (g (cdr n)))))
+  (and (g n)
+       (or (not strict)
+           (and (not (vector-ref v 0))
+                (foldl (lambda (x y) (and x y)) #t 
+                       (map boolean? (cdr (vector->list v))))))))
 
 (define (strictly-pandigital? . n) (pan-helper? #t n))
 
 (check-equal? (strictly-pandigital? 123 456 7 8 9) #t)
 (check-equal? (strictly-pandigital? 123 456 7 8) #f)
 (check-equal? (strictly-pandigital? 123 456 7 8 8) #f)
+(check-equal? (strictly-pandigital? 1230 456 7 8 9) #f)
+(check-equal? (strictly-pandigital? 12300 456 7 8 8) #f)
 
 (provide strictly-pandigital?)
 
@@ -127,5 +132,57 @@
 (check-equal? (pandigital? 123 456 7 8 9) #t)
 (check-equal? (pandigital? 123 456 7 8) #t)
 (check-equal? (pandigital? 123 456 7 8 8) #f)
+(check-equal? (pandigital? 106357289) #t)
+(check-equal? (pandigital? 1230 456 7 8 9) #t)
+(check-equal? (pandigital? 12300 456 7 8 8) #f)
 
 (provide pandigital?)
+
+(define (csv->lst csv)
+  (define (helper lst acc)
+    (cond [(empty? lst) (if (empty? acc) acc (list (list->string (reverse acc))))]
+          [(or (char-whitespace? (car lst))
+               (char=? (car lst) #\"))
+           (helper (cdr lst) acc)]
+          [(char=? (car lst) #\,)
+           (if (empty? acc)
+               (helper (cdr lst) '())
+               (cons (list->string (reverse acc))
+                     (helper (cdr lst) '())))]
+          [else (helper (cdr lst) (cons (car lst) acc))]))
+  (helper (string->list csv) '()))
+
+(check-equal? (csv->lst "\"asd\",\"dsa\"") '("asd" "dsa"))
+(check-equal? (csv->lst "\"asd\",,\"\"dsa\",,,") '("asd" "dsa"))
+(check-equal? (csv->lst "\"asd\"") '("asd"))
+
+(provide csv->lst)
+
+(define (memo-factory fn)
+  (define t (make-hash))
+  (lambda x 
+    (hash-ref t x
+              (lambda ()
+                (define result (apply fn x))
+                (hash-set! t x result)
+                result))))
+
+(provide memo-factory)
+
+(define (zip . l)
+  (if (ormap empty? l) '()
+      (cons (map car l) (apply zip (map cdr l)))))
+
+(check-equal? (zip '(1 2) '(3 4)) '((1 3) (2 4)))
+
+(provide zip)
+
+(define (choose n r)
+  (/ (factorial n)
+     (* (factorial r) (factorial (- n r)))))
+
+(check-equal? (choose 5 3) 10)
+(check-equal? (choose 23 10) 1144066)
+(check-equal? (choose 1 1) 1)
+
+(provide choose)
