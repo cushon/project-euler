@@ -37,12 +37,24 @@
 
 (provide is-palindrome?)
 
-(define (prime-factor n)
-  (define (helper i k)
-    (cond [(>= i k) (list k)]
-          [(zero? (remainder k i)) (append (prime-factor i) (helper i (/ k i)))]
-          [else (helper (add1 i) k)]))
-  (helper 2 n))
+(define (fast-factorizer)
+  (define t (make-hash))
+  (define (h n)
+    (define r (hash-ref t n #f))
+    (if (boolean? r)
+        (local ((define v (next n 2)))
+          (hash-set! t n v)
+          v)
+        r))
+  (define (next n i)
+    (cond
+      [(> i (sqrt n)) (list n)]
+      [(zero? (remainder n i))
+       (append (h i) (h (quotient n i)))]
+      [else (next n (add1 i))]))
+  h)
+
+(define prime-factor  (fast-factorizer))
 
 (check-equal? (prime-factor 360) '(2 2 2 3 3 5))
 
@@ -186,3 +198,71 @@
 (check-equal? (choose 1 1) 1)
 
 (provide choose)
+
+(define (tokenize str)
+  (define (out acc) (list->string (reverse acc)))
+  (define (h chars acc)
+    (cond [(empty? chars) (if (empty? acc) acc (list (out acc)))]
+          [(char-whitespace? (car chars))
+           (if (empty? acc) (h (cdr chars) acc)
+               (cons (out acc) (h (cdr chars) '())))]
+          [else (h (cdr chars) (cons (car chars) acc))]))
+  (h (string->list str) '()))
+
+(check-equal? (tokenize "asd dsa a") '("asd" "dsa" "a"))
+(check-equal? (tokenize "a    a   ") '("a" "a"))
+(check-equal? (tokenize "a") '("a"))
+(check-equal? (tokenize "") '())
+(check-equal? (tokenize "   ") '())
+
+(provide tokenize)
+
+(define (uniq-factorizer ceiling)
+
+  (define ps 
+    (filter is-prime? (range 1 (inexact->exact (round (add1 (sqrt ceiling)))))))
+  
+  (define seen (make-hash))
+  
+  (for-each (lambda (x) (hash-set! seen x (list x))) ps)
+  
+  (define (uniq-factors n)
+    (define (takefrom n f)
+      (if (not (zero? (remainder n f))) n
+          (takefrom (quotient n f) f)))
+    (define (mem n ps)
+      (if (hash-has-key? seen n)
+          (begin
+            (hash-ref seen n))
+          (local ((define v (h n ps)))
+            (hash-set! seen n v)
+            v)))
+    (define (h n ps)
+      (cond [(or (empty? ps) (> (car ps) (add1 (sqrt n))))
+             (if (= n 1) '() (list n))]
+            [(zero? (remainder n (car ps)))
+             (cons (car ps)
+                   (mem 
+                    (takefrom n (car ps))
+                    (cdr ps)))]
+            [else (h n (cdr ps))]))
+    (define answer (mem n ps))
+    (if (empty? answer) (list n) answer))
+  
+  (lambda (n) (uniq-factors n)))
+
+(provide uniq-factorizer)
+
+(define (fast-phi factorizor)
+  (lambda (n)
+    (* n (foldl (lambda (x y) (* (- 1 (/ 1 x)) y)) 1 (factorizor n)))))
+
+(check-equal? ((fast-phi (uniq-factorizer 10)) 2) 1)
+(check-equal? ((fast-phi (uniq-factorizer 10)) 3) 2)
+(check-equal? ((fast-phi (uniq-factorizer 10)) 4) 2)
+(check-equal? ((fast-phi (uniq-factorizer 10)) 5) 4)
+(check-equal? ((fast-phi (uniq-factorizer 10)) 6) 2)
+(check-equal? ((fast-phi (uniq-factorizer 10)) 7) 6)
+(check-equal? ((fast-phi (uniq-factorizer 10)) 8) 4)
+
+(provide fast-phi)

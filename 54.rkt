@@ -1,5 +1,5 @@
 #lang racket
-(require rackunit)
+(require rackunit "common.rkt")
 
 ; Find the number of hands player 1 wins in the collection of poker hands.
 
@@ -11,18 +11,9 @@
           (h (sub1 n) (cdr lst) (cons (car lst) acc))))
     (h n lst '()))
   
-  (define (tokenize str)
-    (define (h lst acc)
-      (cond [(empty? lst) (list (reverse acc))]
-            [(char-whitespace? (car lst))
-             (if (empty? acc) (h (cdr lst) acc)
-                 (cons (reverse acc) (h (cdr lst) '())))]
-            [else (h (cdr lst) (cons (car lst) acc))]))
-    (h (string->list str) '()))
-  
   (define hands
     (map (lambda (x) (split 5 x))
-         (map tokenize
+         (map (lambda (x) (map string->list (tokenize x)))
               (file->lines "54.txt"))))
   
   (define (flush? hand)
