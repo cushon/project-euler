@@ -266,3 +266,37 @@
 (check-equal? ((fast-phi (uniq-factorizer 10)) 8) 4)
 
 (provide fast-phi)
+
+(define (combinations lst need)
+    (define (helper lst remaining need found acc)
+      (cond [(= remaining need) (cons (append (reverse found) lst) acc)]
+            [(zero? need) (cons (reverse found) acc)]
+            [else
+             (let ((acc (helper (cdr lst) (sub1 remaining) need found acc)))
+               (helper (cdr lst) (sub1 remaining) (sub1 need) (cons (car lst) found) acc))]))
+    (helper lst (length lst) need '() '()))
+
+(check-equal? (combinations '(1 2 3) 2) '((1 2) (1 3) (2 3)))
+
+(provide combinations)
+
+(define (permutations lst)
+    (define (splits lst)
+      (define (helper a b)
+        (if (empty? a) '()
+            (begin
+              (cons (list (car a) (append (reverse b) (cdr a)))
+                    (helper (cdr a) (cons (car a) b))))))
+      (helper lst '()))
+    (define (helper lst perm acc)
+      (if (empty? lst)
+          (cons perm acc)
+          (foldl
+           (lambda (x y) (helper (second x) (cons (first x) perm) y))
+           acc
+           (splits lst))))
+    (helper lst '() '()))
+
+(check-equal? (permutations '(1 2 3)) '((1 2 3) (2 1 3) (1 3 2) (3 1 2) (2 3 1) (3 2 1)))
+
+(provide permutations)
