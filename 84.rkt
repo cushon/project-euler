@@ -92,48 +92,7 @@
                 (build-list size values)))
          (build-list size values)))
   
-  (define (normalize v i)
-    (define start (vector-ref v i))
-    (if (zero? start) #f
-        (vector-map! (lambda (x) (/ x start)) v)))
-  
-  (define (elim a b i)
-    (define factor (/ (vector-ref b i) (vector-ref a i)))
-    (for-each (lambda (x) 
-                (vector-set! b x 
-                             (- (vector-ref b x) (* factor (vector-ref a x)))))
-              (range i (sub1 (vector-length b)))))
-  
-  (define (solve mtx i)
-    (if (> i (min (sub1 (vector-length (vector-ref mtx 1)))
-                  (sub1 (vector-length mtx))))  
-        
-        (for-each
-         (lambda (x)
-           ((lambda (a b i)
-              (if (zero? (vector-ref a i)) (void)
-                  (vector-set! b x (/ (vector-ref b i) (vector-ref a i)))))
-            (vector-ref mtx (sub1 (vector-length mtx))) (vector-ref mtx x) 0))
-         (range 0 (- (vector-length mtx) 3)))
-        
-        (begin
-          
-          (and (normalize (vector-ref mtx i) i)
-               (for-each
-                (lambda (x)
-                  (or (= x i)
-                      (elim (vector-ref mtx i) (vector-ref mtx x) i)))
-                (range 0 (sub1 (vector-length mtx)))))
-          
-          (solve mtx (add1 i)))))
-  
-  (define (solve-wrapper lst-mtx)
-    (define mtx (list->vector (map list->vector lst-mtx)))
-    (solve mtx 0)
-    (vector->list 
-     (vector-map (lambda (x) (vector-ref x (sub1 (vector-length x)))) mtx)))
-  
-  (define soln (solve-wrapper mtx))
+  (define soln (rref mtx))
   
   (define (glue lst) (list->int (flatten (map int->list lst))))
   
